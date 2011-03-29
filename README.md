@@ -1,33 +1,62 @@
-Evented I/O for V8 javascript.
-===
+Node.JS libs for Browser
+====
 
-To build:
+This fork of Node.JS is exclusively for porting the Node.js libs
+to the Browser as simply as possible and without polluting the global space.
 
-    ./configure
-    make
-    make install
+Each of the Node.JS libs that can run in the Browser is wrapped, ever so gently,
+as to be compatible [`require-kiss`](https://github.com/coolaj86/require-kiss-js).
 
-To run the tests:
+Currently Browserified:
 
-    make test
+  * assert
+  * events
 
-To build the documentation:
+Usage
+====
 
-    make doc
+All you have to do is this:
 
-To read the documentation:
+    <head>
+      <script src="/javascripts/require-kiss.js"></script>
+      <script src="/javascripts/events.js"></script>
+      <script>
+        (function () {
+          "use strict";
 
-    man doc/node.1
+          var EventEmitter = require("events").EventEmitter
+            , events = new EventEmitter();
 
-Resources for Newcomers
----
-  - [The Wiki](http://github.com/ry/node/wiki)
-  - [nodejs.org](http://nodejs.org/)
-  - [how to install node.js and npm (node package manager)](http://joyeur.com/2010/12/10/installing-node-and-npm/)
-  - [list of modules](http://github.com/ry/node/wiki/modules)
-  - [list of companies and projects using node](http://github.com/ry/node/wiki)
-  - [node.js mailing list](http://groups.google.com/group/nodejs)
-  - irc chatroom, [#node.js on freenode.net](http://webchat.freenode.net?channels=node.js&uio=d4)
-  - [community](https://github.com/ry/node/wiki/Community)
-  - [contributing](https://github.com/ry/node/wiki/Contributing)
-  - [big list of all the helpful wiki pages](https://github.com/ry/node/wiki/_pages)
+          event.on('say', function (thing) {
+            alert(thing);
+          });
+
+          event.emit('say', "Hello World!");
+        }());
+      </script>
+    </head>
+
+If any modules are required other than the ones included you'll get a nifty message such as:
+
+    `util.js` was required but not found. Try including <script src="./util.js"></script>.
+
+If you plan to support legacy browsers you may also wish to include [`global-es5.js`](http://persevere-framework.googlecode.com/svn-history/r678/trunk/WEB-INF/narwhal/engines/default/lib/global-es5.js) from the [persevere framework](http://code.google.com/p/persevere-framework/), [`json2.js`](https://github.com/douglascrockford/JSON-js), etc.
+
+How it's done
+====
+
+In most cases, what this entails in terms of changes to the node code is nothing more than this:
+
+    (function () {
+      "use strict";
+
+      require('require-kiss');
+
+    // NODE-MODULE ORIGINAL CODE
+
+      provide('NODE-MODULE', module.exports);
+    }());
+
+Each `git pull` the new modifications merge without conflict
+    
+If you have a simpler methodology, I'd love to hear it.
