@@ -11,6 +11,9 @@ Currently Browserified:
 
   * assert
   * events
+  * path
+  * querystring
+  * url
 
 Usage
 ====
