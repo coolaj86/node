@@ -9,8 +9,9 @@ as to be compatible [`require-kiss`](https://github.com/coolaj86/require-kiss-js
 
 Currently Browserified:
 
-  * assert
   * events
+  * util
+  * assert
   * path
   * querystring
   * url
