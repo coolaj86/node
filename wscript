@@ -352,13 +352,32 @@ def configure(conf):
   elif 'DEST_CPU' in conf.env and conf.env['DEST_CPU']:
     conf.env['DEST_CPU'] = canonical_cpu_type(conf.env['DEST_CPU'])
 
-  conf.check(lib='rt', uselib_store='RT')
+  have_librt = conf.check(lib='rt', uselib_store='RT')
+
+  have_monotonic = False
+  if have_librt:
+    code =  """
+      #include <time.h>
+      int main(void) {
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        return 0;
+      }
+    """
+    have_monotonic = conf.check_cc(lib="rt", msg="Checking for CLOCK_MONOTONIC", fragment=code)
+
+  if have_monotonic:
+    conf.env.append_value('CPPFLAGS', '-DHAVE_MONOTONIC_CLOCK=1')
+  else:
+    conf.env.append_value('CPPFLAGS', '-DHAVE_MONOTONIC_CLOCK=0')
 
   if sys.platform.startswith("sunos"):
     if not conf.check(lib='socket', uselib_store="SOCKET"):
       conf.fatal("Cannot find socket library")
     if not conf.check(lib='nsl', uselib_store="NSL"):
       conf.fatal("Cannot find nsl library")
+    if not conf.check(lib='kstat', uselib_store="KSTAT"):
+      conf.fatal("Cannot find kstat library")
 
   conf.sub_config('deps/libeio')
 
@@ -802,7 +821,7 @@ def build(bld):
   node = bld.new_task_gen("cxx", product_type)
   node.name         = "node"
   node.target       = "node"
-  node.uselib = 'RT EV OPENSSL CARES EXECINFO DL KVM SOCKET NSL UTIL OPROFILE'
+  node.uselib = 'RT EV OPENSSL CARES EXECINFO DL KVM SOCKET NSL KSTAT UTIL OPROFILE'
   node.add_objects = 'eio http_parser'
   if product_type_is_lib:
     node.install_path = '${LIBDIR}'
@@ -870,7 +889,7 @@ def build(bld):
         , 'CPPFLAGS'  : " ".join(program.env["CPPFLAGS"]).replace('"', '\\"')
         , 'LIBFLAGS'  : " ".join(program.env["LIBFLAGS"]).replace('"', '\\"')
         , 'PREFIX'    : safe_path(program.env["PREFIX"])
-        , 'VERSION'   : '0.4.4' # FIXME should not be hard-coded, see NODE_VERSION_STRING in src/node_version.
+        , 'VERSION'   : '0.4.5' # FIXME should not be hard-coded, see NODE_VERSION_STRING in src/node_version.
         }
     return x
 

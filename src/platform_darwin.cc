@@ -40,6 +40,7 @@ namespace node {
 using namespace v8;
 
 static char *process_title;
+double Platform::prog_start_time = Platform::GetUptime();
 
 char** Platform::SetupArgs(int argc, char *argv[]) {
   process_title = argc ? strdup(argv[0]) : NULL;
@@ -127,7 +128,7 @@ int Platform::GetCPUInfo(Local<Array> *cpus) {
     return -1;
   }
   *cpus = Array::New(numcpus);
-  for (int i = 0; i < numcpus; i++) {
+  for (unsigned int i = 0; i < numcpus; i++) {
     cpuinfo = Object::New();
     cputimes = Object::New();
     cputimes->Set(String::New("user"),
@@ -176,7 +177,7 @@ double Platform::GetTotalMemory() {
   return static_cast<double>(info);
 }
 
-double Platform::GetUptime() {
+double Platform::GetUptimeImpl() {
   time_t now;
   struct timeval info;
   size_t size = sizeof(info);
@@ -206,6 +207,12 @@ int Platform::GetLoadAvg(Local<Array> *loads) {
                                / static_cast<double>(info.fscale)));
 
   return 0;
+}
+
+
+v8::Handle<v8::Value> Platform::GetInterfaceAddresses() {
+  HandleScope scope;
+  return scope.Close(Object::New());
 }
 
 }  // namespace node

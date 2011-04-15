@@ -42,23 +42,67 @@
 
     startup.resolveArgv0();
 
-    if (startup.runThirdPartyMain()) {
-      return;
-    }
+    // There are various modes that Node can run in. The most common two
+    // are running from a script and running the REPL - but there are a few
+    // others like the debugger or running --eval arguments. Here we decide
+    // which mode we run in.
 
-    if (startup.runDebugger()) {
-      return;
-    }
+    if (NativeModule.exists('_third_party_main')) {
+      // To allow people to extend Node in different ways, this hook allows
+      // one to drop a file lib/_third_party_main.js into the build
+      // directory which will be executed instead of Node's normal loading.
+      process.nextTick(function() {
+        NativeModule.require('_third_party_main');
+      });
 
-    if (startup.runScript()) {
-      return;
-    }
+    } else if (process.argv[1] == 'debug') {
+      // Start the debugger agent
+      var d = NativeModule.require('_debugger');
+      d.start();
 
-    if (startup.runEval()) {
-      return;
-    }
+    } else if (process.argv[1]) {
+      // make process.argv[1] into a full path
+      if (!(/^http:\/\//).exec(process.argv[1])) {
+        var path = NativeModule.require('path');
+        process.argv[1] = path.resolve(process.argv[1]);
+      }
 
-    startup.runRepl();
+      var Module = NativeModule.require('module');
+      // REMOVEME: nextTick should not be necessary. This hack to get
+      // test/simple/test-exception-handler2.js working.
+      // Main entry point into most programs:
+      process.nextTick(Module.runMain);
+
+    } else if (process._eval) {
+      // User passed '-e' or '--eval' arguments to Node.
+      var Module = NativeModule.require('module');
+      var rv = new Module()._compile('return eval(process._eval)', 'eval');
+      console.log(rv);
+
+    } else {
+      var binding = process.binding('stdio');
+      var fd = binding.openStdin();
+      var Module = NativeModule.require('module');
+
+      if (NativeModule.require('tty').isatty(fd)) {
+        // REPL
+        Module.requireRepl().start();
+
+      } else {
+        // Read all of stdin - execute it.
+        process.stdin.resume();
+        process.stdin.setEncoding('utf8');
+
+        var code = '';
+        process.stdin.on('data', function(d) {
+          code += d;
+        });
+
+        process.stdin.on('end', function() {
+          new Module()._compile(code, '[stdin]');
+        });
+      }
+    }
   }
 
   startup.globalVariables = function() {
@@ -67,6 +111,9 @@
     global.GLOBAL = global;
     global.root = global;
     global.Buffer = NativeModule.require('buffer').Buffer;
+    if (process.cov) {
+      global.__cov = {};
+    }
   };
 
   startup.globalTimeouts = function() {
@@ -299,78 +346,27 @@
       var path = NativeModule.require('path');
       process.argv[0] = path.join(cwd, process.argv[0]);
     }
-  };
 
-  startup.runThirdPartyMain = function() {
-    // To allow people to extend Node in different ways, this hook allows
-    // one to drop a file lib/_third_party_main.js into the build directory
-    // which will be executed instead of Node's normal loading.
-    if (!NativeModule.exists('_third_party_main')) {
-      return;
+    if (process.cov) {
+      process.on('exit', function() {
+        var coverage = JSON.stringify(__cov);
+        var path = NativeModule.require('path');
+        var fs = NativeModule.require('fs');
+        var filename = path.join(cwd, 'node-cov.json');
+        try {
+          fs.unlinkSync(filename);
+        } catch(e) {
+        }
+        fs.writeFileSync(filename, coverage);
+      });
     }
-
-    process.nextTick(function() {
-      NativeModule.require('_third_party_main');
-    });
-    return true;
   };
-
-  startup.runDebugger = function() {
-    if (!(process.argv[1] == 'debug')) {
-      return;
-    }
-
-    // Start the debugger agent
-    var d = NativeModule.require('_debugger');
-    d.start();
-    return true;
-  };
-
-  startup.runScript = function() {
-    if (!process.argv[1]) {
-      return;
-    }
-
-    // make process.argv[1] into a full path
-    if (!(/^http:\/\//).exec(process.argv[1])) {
-      var path = NativeModule.require('path');
-      process.argv[1] = path.resolve(process.argv[1]);
-    }
-
-    var Module = NativeModule.require('module');
-
-    // REMOVEME: nextTick should not be necessary. This hack to get
-    // test/simple/test-exception-handler2.js working.
-    process.nextTick(Module.runMain);
-
-    return true;
-  };
-
-  startup.runEval = function() {
-    // -e, --eval
-    if (!process._eval) {
-      return;
-    }
-
-    var Module = NativeModule.require('module');
-
-    var rv = new Module()._compile('return eval(process._eval)', 'eval');
-    console.log(rv);
-    return true;
-  };
-
-  startup.runRepl = function() {
-    var Module = NativeModule.require('module');
-    // REPL
-    Module.requireRepl().start();
-  };
-
 
   // Below you find a minimal module system, which is used to load the node
   // core modules found in lib/*.js. All core modules are compiled into the
   // node binary, so they can be loaded faster.
 
-  var Script = process.binding('evals').Script;
+  var Script = process.binding('evals').NodeScript;
   var runInThisContext = Script.runInThisContext;
 
   function NativeModule(id) {

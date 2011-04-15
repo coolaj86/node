@@ -31,6 +31,8 @@ This is an `EventEmitter` with the following events:
 
 `function (request, response) { }`
 
+Emitted each time there is request. Note that there may be multiple requests
+per connection (in the case of keep-alive connections).
  `request` is an instance of `http.ServerRequest` and `response` is
  an instance of `http.ServerResponse`
 
@@ -47,13 +49,6 @@ This is an `EventEmitter` with the following events:
 `function (errno) { }`
 
  Emitted when the server closes.
-
-### Event: 'request'
-
-`function (request, response) {}`
-
-Emitted each time there is request. Note that there may be multiple requests
-per connection (in the case of keep-alive connections).
 
 ### Event: 'checkContinue'
 
@@ -141,7 +136,7 @@ Emitted when a piece of the message body is received.
 Example: A chunk of the body is given as the single
 argument. The transfer-encoding has been decoded.  The
 body chunk is a string.  The body encoding is set with
-`request.setBodyEncoding()`.
+`request.setEncoding()`.
 
 ### Event: 'end'
 
@@ -241,7 +236,7 @@ passed as the second parameter to the `'request'` event. It is a `Writable Strea
 ### response.writeContinue()
 
 Sends a HTTP/1.1 100 Continue message to the client, indicating that
-the request body should be sent. See the the `checkContinue` event on
+the request body should be sent. See the [checkContinue](#event_checkContinue_) event on
 `Server`.
 
 ### response.writeHead(statusCode, [reasonPhrase], [headers])
@@ -458,7 +453,7 @@ Emitted each time a server responds to a request with an upgrade. If this event
 isn't being listened for, clients receiving an upgrade header will have their
 connections closed.
 
-See the description of the `upgrade` event for `http.Server` for further details.
+See the description of the [upgrade event](http.html#event_upgrade_) for `http.Server` for further details.
 
 ### Event: 'continue'
 
@@ -485,7 +480,7 @@ A queue of requests waiting to be sent to sockets.
 ## http.ClientRequest
 
 This object is created internally and returned from `http.request()`.  It
-represents an _in-progress_ request whose header has already been queued.  The 
+represents an _in-progress_ request whose header has already been queued.  The
 header is still mutable using the `setHeader(name, value)`, `getHeader(name)`,
 `removeHeader(name)` API.  The actual header will be sent along with the first
 data chunk or when closing the connection.

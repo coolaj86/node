@@ -107,6 +107,7 @@ static char *eval_string = NULL;
 static int option_end_index = 0;
 static bool use_debug_agent = false;
 static bool debug_wait_connect = false;
+static bool cov = false;
 static int debug_port=5858;
 static int max_stack_size = 0;
 
@@ -1103,6 +1104,8 @@ enum encoding ParseEncoding(Handle<Value> encoding_v, enum encoding _default) {
     return UCS2;
   } else if (strcasecmp(*encoding, "binary") == 0) {
     return BINARY;
+  } else if (strcasecmp(*encoding, "hex") == 0) {
+    return HEX;
   } else if (strcasecmp(*encoding, "raw") == 0) {
     fprintf(stderr, "'raw' (array of integers) has been removed. "
                     "Use 'binary'.\n");
@@ -1153,6 +1156,7 @@ ssize_t DecodeBytes(v8::Handle<v8::Value> val, enum encoding encoding) {
 
   if (encoding == UTF8) return str->Utf8Length();
   else if (encoding == UCS2) return str->Length() * 2;
+  else if (encoding == HEX) return str->Length() / 2;
 
   return str->Length();
 }
@@ -1417,7 +1421,11 @@ static Handle<Value> SetGid(const Arguments& args) {
 
     if ((err = getgrnam_r(*grpnam, &grp, getbuf, ARRAY_SIZE(getbuf), &grpp)) ||
         grpp == NULL) {
-      return ThrowException(ErrnoException(errno, "getgrnam_r"));
+      if (errno == 0)
+        return ThrowException(Exception::Error(
+          String::New("setgid group id does not exist")));
+      else
+        return ThrowException(ErrnoException(errno, "getgrnam_r"));
     }
 
     gid = grpp->gr_gid;
@@ -1452,7 +1460,11 @@ static Handle<Value> SetUid(const Arguments& args) {
 
     if ((err = getpwnam_r(*pwnam, &pwd, getbuf, ARRAY_SIZE(getbuf), &pwdp)) ||
         pwdp == NULL) {
-      return ThrowException(ErrnoException(errno, "getpwnam_r"));
+      if (errno == 0)
+        return ThrowException(Exception::Error(
+          String::New("setuid user id does not exist")));
+      else
+        return ThrowException(ErrnoException(errno, "getpwnam_r"));
     }
 
     uid = pwdp->pw_uid;
@@ -1503,6 +1515,18 @@ static void CheckStatus(EV_P_ ev_timer *watcher, int revents) {
   }
 }
 
+static Handle<Value> Uptime(const Arguments& args) {
+  HandleScope scope;
+  assert(args.Length() == 0);
+
+  double uptime =  Platform::GetUptime(true);
+
+  if (uptime < 0) {
+    return Undefined();
+  }
+
+  return scope.Close(Number::New(uptime));
+}
 
 v8::Handle<v8::Value> MemoryUsage(const v8::Arguments& args) {
   HandleScope scope;
@@ -1919,7 +1943,7 @@ static Handle<Array> EnvEnumerator(const AccessorInfo& info) {
 }
 
 
-static void Load(int argc, char *argv[]) {
+Handle<Object> SetupProcessObject(int argc, char *argv[]) {
   HandleScope scope;
 
   int i, j;
@@ -2006,6 +2030,7 @@ static void Load(int argc, char *argv[]) {
   process->Set(String::NewSymbol("ENV"), ENV);
 
   process->Set(String::NewSymbol("pid"), Integer::New(getpid()));
+  process->Set(String::NewSymbol("cov"), cov ? True() : False());
 
   // -e, --eval
   if (eval_string) {
@@ -2041,6 +2066,7 @@ static void Load(int argc, char *argv[]) {
   NODE_SET_METHOD(process, "_kill", Kill);
 #endif // __POSIX__
 
+  NODE_SET_METHOD(process, "uptime", Uptime);
   NODE_SET_METHOD(process, "memoryUsage", MemoryUsage);
 
   NODE_SET_METHOD(process, "binding", Binding);
@@ -2049,11 +2075,30 @@ static void Load(int argc, char *argv[]) {
   process->Set(String::NewSymbol("EventEmitter"),
                EventEmitter::constructor_template->GetFunction());
 
+  return process;
+}
+
+
+static void AtExit() {
+  node::Stdio::Flush();
+  node::Stdio::DisableRawMode(STDIN_FILENO);
+}
+
+
+static void SignalExit(int signal) {
+  Stdio::DisableRawMode(STDIN_FILENO);
+  _exit(1);
+}
+
+
+void Load(Handle<Object> process) {
   // Compile, execute the src/node.js file. (Which was included as static C
   // string in node_natives.h. 'natve_node' is the string containing that
   // source code.)
 
   // The node.js file returns a function 'f'
+
+  atexit(AtExit);
 
   TryCatch try_catch;
 
@@ -2128,6 +2173,7 @@ static void PrintHelp() {
          "  --v8-options         print v8 command line options\n"
          "  --vars               print various compiled-in variables\n"
          "  --max-stack-size=val set max v8 stack size (bytes)\n"
+         "  --cov                code coverage; writes node-cov.json \n"
          "\n"
          "Enviromental variables:\n"
          "NODE_PATH              ':'-separated list of directories\n"
@@ -2141,14 +2187,17 @@ static void PrintHelp() {
 }
 
 // Parse node command line arguments.
-static void ParseArgs(int *argc, char **argv) {
+static void ParseArgs(int argc, char **argv) {
   int i;
 
   // TODO use parse opts
-  for (i = 1; i < *argc; i++) {
+  for (i = 1; i < argc; i++) {
     const char *arg = argv[i];
     if (strstr(arg, "--debug") == arg) {
       ParseDebugOpt(arg);
+      argv[i] = const_cast<char*>("");
+    } else if (!strcmp(arg, "--cov")) {
+      cov = true;
       argv[i] = const_cast<char*>("");
     } else if (strcmp(arg, "--version") == 0 || strcmp(arg, "-v") == 0) {
       printf("%s\n", NODE_VERSION);
@@ -2166,7 +2215,7 @@ static void ParseArgs(int *argc, char **argv) {
       PrintHelp();
       exit(0);
     } else if (strcmp(arg, "--eval") == 0 || strcmp(arg, "-e") == 0) {
-      if (*argc <= i + 1) {
+      if (argc <= i + 1) {
         fprintf(stderr, "Error: --eval requires an argument\n");
         exit(1);
       }
@@ -2180,18 +2229,6 @@ static void ParseArgs(int *argc, char **argv) {
   }
 
   option_end_index = i;
-}
-
-
-static void AtExit() {
-  node::Stdio::Flush();
-  node::Stdio::DisableRawMode(STDIN_FILENO);
-}
-
-
-static void SignalExit(int signal) {
-  Stdio::DisableRawMode(STDIN_FILENO);
-  _exit(1);
 }
 
 
@@ -2247,12 +2284,12 @@ static int RegisterSignalHandler(int signal, void (*handler)(int)) {
 #endif // __POSIX__
 
 
-int Start(int argc, char *argv[]) {
+char** Init(int argc, char *argv[]) {
   // Hack aroung with the argv pointer. Used for process.title = "blah".
   argv = node::Platform::SetupArgs(argc, argv);
 
   // Parse a few arguments which are specific to Node.
-  node::ParseArgs(&argc, argv);
+  node::ParseArgs(argc, argv);
   // Parse the rest of the args (up to the 'option_end_index' (where '--' was
   // in the command line))
   int v8argc = node::option_end_index;
@@ -2339,9 +2376,6 @@ int Start(int argc, char *argv[]) {
     eio_set_max_poll_reqs(10);
   }
 
-  V8::Initialize();
-  HandleScope handle_scope;
-
   V8::SetFatalErrorHandler(node::OnFatalError);
 
 
@@ -2371,15 +2405,39 @@ int Start(int argc, char *argv[]) {
 #endif // __POSIX__
   }
 
+  return argv;
+}
+
+
+void EmitExit(v8::Handle<v8::Object> process) {
+  // process.emit('exit')
+  Local<Value> emit_v = process->Get(String::New("emit"));
+  assert(emit_v->IsFunction());
+  Local<Function> emit = Local<Function>::Cast(emit_v);
+  Local<Value> args[] = { String::New("exit") };
+  TryCatch try_catch;
+  emit->Call(process, 1, args);
+  if (try_catch.HasCaught()) {
+    FatalException(try_catch);
+  }
+}
+
+
+int Start(int argc, char *argv[]) {
+  v8::V8::Initialize();
+  v8::HandleScope handle_scope;
+
+  argv = Init(argc, argv);
+
   // Create the one and only Context.
   Persistent<v8::Context> context = v8::Context::New();
   v8::Context::Scope context_scope(context);
 
-  atexit(node::AtExit);
+  Handle<Object> process = SetupProcessObject(argc, argv);
 
   // Create all the objects, load modules, do everything.
   // so your next reading stop should be node::Load()!
-  node::Load(argc, argv);
+  Load(process);
 
   // TODO Probably don't need to start this each time.
   // Avoids failing on test/simple/test-eio-race3.js though
@@ -2392,18 +2450,7 @@ int Start(int argc, char *argv[]) {
   // watchers, it blocks.
   ev_loop(EV_DEFAULT_UC_ 0);
 
-
-  // process.emit('exit')
-  Local<Value> emit_v = process->Get(String::New("emit"));
-  assert(emit_v->IsFunction());
-  Local<Function> emit = Local<Function>::Cast(emit_v);
-  Local<Value> args[] = { String::New("exit") };
-  TryCatch try_catch;
-  emit->Call(process, 1, args);
-  if (try_catch.HasCaught()) {
-    FatalException(try_catch);
-  }
-
+  EmitExit(process);
 
 #ifndef NDEBUG
   // Clean up.

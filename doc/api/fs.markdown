@@ -82,7 +82,7 @@ Synchronous chmod(2).
 ### fs.stat(path, [callback])
 
 Asynchronous stat(2). The callback gets two arguments `(err, stats)` where
-`stats` is a `fs.Stats` object. It looks like this:
+`stats` is a [`fs.Stats`](#fs.Stats) object. It looks like this:
 
     { dev: 2049,
       ino: 305352,
@@ -98,7 +98,7 @@ Asynchronous stat(2). The callback gets two arguments `(err, stats)` where
       mtime: '2009-06-29T11:11:40Z',
       ctime: '2009-06-29T11:11:40Z' }
 
-See the `fs.Stats` section below for more information.
+See the [fs.Stats](#fs.Stats) section below for more information.
 
 ### fs.lstat(path, [callback])
 
@@ -216,6 +216,18 @@ or 'a+'. `mode` defaults to 0666. The callback gets two arguments `(err, fd)`.
 
 Synchronous open(2).
 
+### fs.utimes(path, atime, mtime, callback)
+### fs.utimesSync(path, atime, mtime)
+
+Change file timestamps.
+
+### fs.futimes(path, atime, mtime, callback)
+### fs.futimesSync(path, atime, mtime)
+
+Change file timestamps with the difference that if filename refers to a
+symbolic link, then the link is not dereferenced.
+
+
 ### fs.write(fd, buffer, offset, length, position, [callback])
 
 Write `buffer` to the file specified by `fd`.
@@ -227,8 +239,8 @@ should be written. If `position` is `null`, the data will be written at the
 current position.
 See pwrite(2).
 
-The callback will be given two arguments `(err, written)` where `written`
-specifies how many _bytes_ were written.
+The callback will be given three arguments `(err, written, buffer)` where `written`
+specifies how many _bytes_ were written into `buffer`.
 
 Note that it is unsafe to use `fs.write` multiple times on the same file
 without waiting for the callback. For this scenario,
@@ -257,7 +269,7 @@ Read data from the file specified by `fd`.
 `position` is an integer specifying where to begin reading from in the file.
 If `position` is `null`, data will be read from the current file position.
 
-The callback is given the two arguments, `(err, bytesRead)`.
+The callback is given the three arguments, `(err, bytesRead, buffer)`.
 
 ### fs.readSync(fd, buffer, offset, length, position)
 
@@ -367,7 +379,7 @@ Returns a new ReadStream object (See `Readable Stream`).
 
 `options` can include `start` and `end` values to read a range of bytes from
 the file instead of the entire file.  Both `start` and `end` are inclusive and
-start at 0.  When used, both the limits must be specified always.
+start at 0.
 
 An example to read the last 10 bytes of a file which is 100 bytes long:
 
@@ -383,6 +395,11 @@ An example to read the last 10 bytes of a file which is 100 bytes long:
 `function (fd) { }`
 
  `fd` is the file descriptor used by the WriteStream.
+
+### file.bytesWritten
+
+The number of bytes written so far. Does not include data that is still queued
+for writing.
 
 ### fs.createWriteStream(path, [options])
 

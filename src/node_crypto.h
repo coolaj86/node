@@ -39,11 +39,14 @@
 namespace node {
 namespace crypto {
 
+static X509_STORE* root_cert_store;
+
 class SecureContext : ObjectWrap {
  public:
   static void Initialize(v8::Handle<v8::Object> target);
 
   SSL_CTX *ctx_;
+  // TODO: ca_store_ should probably be removed, it's not used anywhere.
   X509_STORE *ca_store_;
 
  protected:
@@ -55,6 +58,7 @@ class SecureContext : ObjectWrap {
   static v8::Handle<v8::Value> AddCRL(const v8::Arguments& args);
   static v8::Handle<v8::Value> AddRootCerts(const v8::Arguments& args);
   static v8::Handle<v8::Value> SetCiphers(const v8::Arguments& args);
+  static v8::Handle<v8::Value> SetOptions(const v8::Arguments& args);
   static v8::Handle<v8::Value> Close(const v8::Arguments& args);
 
   SecureContext() : ObjectWrap() {
@@ -62,14 +66,25 @@ class SecureContext : ObjectWrap {
     ca_store_ = NULL;
   }
 
-  ~SecureContext() {
+  void FreeCTXMem() {
     if (ctx_) {
+      if (ctx_->cert_store == root_cert_store) {
+        // SSL_CTX_free() will attempt to free the cert_store as well.
+        // Since we want our root_cert_store to stay around forever
+        // we just clear the field. Hopefully OpenSSL will not modify this
+        // struct in future versions.
+        ctx_->cert_store = NULL;
+      }
       SSL_CTX_free(ctx_);
       ctx_ = NULL;
       ca_store_ = NULL;
     } else {
       assert(ca_store_ == NULL);
     }
+  }
+
+  ~SecureContext() {
+    FreeCTXMem();
   }
 
  private:

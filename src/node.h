@@ -37,7 +37,12 @@
 
 namespace node {
 
-int Start (int argc, char *argv[]);
+int Start(int argc, char *argv[]);
+
+char** Init(int argc, char *argv[]);
+v8::Handle<v8::Object> SetupProcessObject(int argc, char *argv[]);
+void Load(v8::Handle<v8::Object> process);
+void EmitExit(v8::Handle<v8::Object> process);
 
 #define NODE_PSYMBOL(s) Persistent<String>::New(String::NewSymbol(s))
 
@@ -64,7 +69,7 @@ do {                                                                      \
                                   __callback##_TEM);                      \
 } while (0)
 
-enum encoding {ASCII, UTF8, BASE64, UCS2, BINARY};
+enum encoding {ASCII, UTF8, BASE64, UCS2, BINARY, HEX};
 enum encoding ParseEncoding(v8::Handle<v8::Value> encoding_v,
                             enum encoding _default = BINARY);
 void FatalException(v8::TryCatch &try_catch);
