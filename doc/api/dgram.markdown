@@ -91,6 +91,12 @@ Example of a Unix domain datagram server that echoes back all messages it receiv
       console.log("server listening " + server.address().address);
     })
 
+    // Error handlers must be attached before calling `bind`
+    // as `bind` is synchronous
+    server.on("error", function (e) {
+      console.log(e);
+    });
+
     server.bind(serverPath);
 
 Example of a Unix domain datagram client that talks to this server:
@@ -134,6 +140,12 @@ Example of a UDP server listening on port 41234:
       var address = server.address();
       console.log("server listening " +
           address.address + ":" + address.port);
+    });
+
+    // Error handlers must be attached before calling `bind`
+    // as `bind` is synchronous
+    server.on("error", function (e) {
+      console.log(e);
     });
 
     server.bind(41234);
