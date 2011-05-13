@@ -76,6 +76,8 @@ For Unix domain datagram sockets, start listening for incoming datagrams on a
 socket specified by `path`. Note that clients may `send()` without `bind()`,
 but no datagrams will be received without a `bind()`.
 
+Because `bind()` is synchronous, the `error` handler should be attached before `server.bind()` is called.
+
 Example of a Unix domain datagram server that echoes back all messages it receives:
 
     var dgram = require("dgram");
@@ -90,6 +92,10 @@ Example of a Unix domain datagram server that echoes back all messages it receiv
     server.on("listening", function () {
       console.log("server listening " + server.address().address);
     })
+
+    server.on("error", function (e) {
+      console.log(e);
+    });
 
     server.bind(serverPath);
 
@@ -119,6 +125,8 @@ Example of a Unix domain datagram client that talks to this server:
 For UDP sockets, listen for datagrams on a named `port` and optional `address`.  If
 `address` is not specified, the OS will try to listen on all addresses.
 
+Because `bind()` is synchronous, the `error` handler should be attached before `server.bind()` is called.
+
 Example of a UDP server listening on port 41234:
 
     var dgram = require("dgram");
@@ -134,6 +142,10 @@ Example of a UDP server listening on port 41234:
       var address = server.address();
       console.log("server listening " +
           address.address + ":" + address.port);
+    });
+
+    server.on("error", function (e) {
+      console.log(e);
     });
 
     server.bind(41234);
