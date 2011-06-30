@@ -1,0 +1,22 @@
+{
+  "author": "Joyent (http://www.joyent.com)",
+  "name": "querystring",
+  "description": "Node.JS querystring module",
+  "keywords": ["ender", "querystring"],
+  "version": "0.4.9",
+  "homepage": "http://nodejs.org/docs/v0.4.9/api/querystring.html",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/coolaj86/nodejs-libs-4-browser.git"
+  },
+  "main": "./querystring.js",
+  "directories": {
+    "lib": "."
+  },
+  "engines": {
+    "node": ">= 0.2.0",
+    "ender": ">= 0.5.0"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
