@@ -1,4 +1,145 @@
-2011.03.26, Version 0.4.4 (stable)
+2011.06.29, Version 0.4.9 (stable)
+
+* Improve documentation
+
+* #1095 error handling bug in stream.pipe() (Felix Geisendörfer)
+
+* #1097 Fix a few leaks in node_crypto.cc (Ben Noordhuis)
+
+* #562 #1078 Parse file:// urls properly (Ryan Petrello)
+
+* #880 Option to disable SSLv2 (Jérémy Lal)
+
+* #1087 Disabling SSL compression disabled with early OpenSSLs.
+
+* #1144 debugger: don't allow users to input non-valid commands
+  (Siddharth Mahendraker)
+
+* Perf improvement for util.inherits
+
+* #1166 Support for signature verification with RSA/DSA public keys
+  (Mark Cavage)
+
+* #1177 Remove node_modules lookup optimization to better support
+  nested project structures (Mathias Buus)
+
+* #1203 Add missing scope.Close to fs.sendfileSync
+
+* #1187 Support multiple 'link' headers
+
+* #1196 Fix -e/--eval can't load module from node_modules (Koichi Kobayashi)
+
+* Upgrade V8 to 3.1.8.25, upgrade http-parser.
+
+
+2011.05.20, Version 0.4.8 (stable), 7dd22c26e4365698dc3efddf138c4d399cb912c8
+
+* #974 Properly report traceless errors (isaacs)
+
+* #983 Better JSON.parse error detection in REPL (isaacs)
+
+* #836 Agent socket errors bubble up to req only if req exists
+
+* #1041 Fix event listener leak check timing (koichik)
+
+*	#1038 Fix dns.resolve() with 'PTR' throws Error: Unknown type "PTR"
+  (koichik)
+
+* #1073 Share SSL context between server connections (Fedor Indutny)
+
+* Disable compression with OpenSSL. Improves memory perf.
+
+* Implement os.totalmem() and os.freemem() for SunOS (Alexandre Marangone)
+
+* Fix a special characters in URL regression (isaacs)
+
+* Fix idle timeouts in HTTPS (Felix Geisendörfer)
+
+* SlowBuffer.write() with 'ucs2' throws ReferenceError. (koichik)
+
+* http.ServerRequest 'close' sometimes gets an error argument
+  (Felix Geisendörfer)
+
+* Doc improvements
+
+* cleartextstream.destroy() should close(2) the socket. Previously was being
+	mapped to a shutdown(2) syscall.
+
+* No longer compile out asserts and debug statements in normal build.
+
+* Debugger improvements.
+
+* Upgrade V8 to 3.1.8.16.
+
+
+2011.04.22, Version 0.4.7 (stable)
+
+* Don't emit error on ECONNRESET from read() #670
+
+* Fix: Multiple pipes to the same stream were broken #929
+  (Felix Geisendörfer)
+
+* URL parsing/formatting corrections #954 (isaacs)
+
+* make it possible to do repl.start('', stream) (Wade Simmons)
+
+* Add os.loadavg for SunOS (Robert Mustacchi)
+
+* Fix timeouts with floating point numbers #897 (Jorge Chamorro Bieling)
+
+* Improve docs.
+
+
+2011.04.13, Version 0.4.6 (stable)
+
+* Don't error on ENOTCONN from shutdown() #670
+
+* Auto completion of built-in debugger suggests prefix match rather than
+	partial match. (koichik)
+
+* circular reference in vm modules. #822 (Jakub Lekstan)
+
+* http response.readable should be false after 'end' #867 (Abe Fettig)
+
+* Implemenet os.cpus() and os.uptime() on Solaris (Scott McWhirter)
+
+* fs.ReadStream: Allow omission of end option for range reads #801
+	(Felix Geisendörfer)
+
+* Buffer.write() with UCS-2 should not be write partial char
+	#916 (koichik)
+
+* Pass secureProtocol through on tls.Server creation (Theo Schlossnagle)
+
+* TLS use RC4-SHA by default
+
+* Don't strangely drop out of event loop on HTTPS client uploads #892
+
+* Doc improvements
+
+* Upgrade v8 to 3.1.8.10
+
+
+2011.04.01, Version 0.4.5 (stable)
+
+* Fix listener leak in stream.pipe() (Mikeal Rogers)
+
+* Retain buffers in fs.read/write() GH-814 (Jorge Chamorro Bieling)
+
+* TLS performance improvements
+
+* SlowBuffer.prototype.slice bug GH-843
+
+* process.stderr.write should return true
+
+* Immediate pause/resume race condition GH-535 (isaacs)
+
+* Set default host header properly GH-721 (isaacs)
+
+* Upgrade V8 to 3.1.8.8
+
+
+2011.03.26, Version 0.4.4 (stable), 25122b986a90ba0982697b7abcb0158c302a1019
 
 * CryptoStream.end shouldn't throw if not writable GH-820
 

@@ -104,7 +104,14 @@ when the server has been bound.
 Start a server listening for connections on the given file descriptor.
 
 This file descriptor must have already had the `bind(2)` and `listen(2)` system
-calls invoked on it.
+calls invoked on it.  Additionally, it must be set non-blocking; try
+`fcntl(fd, F_SETFL, O_NONBLOCK)`.
+
+#### server.pause(msecs)
+
+Stop accepting connections for the given number of milliseconds (default is
+one second).  This could be useful for throttling new connections against
+DoS attacks or other oversubscription.
 
 #### server.close()
 
@@ -115,8 +122,9 @@ event.
 
 #### server.address()
 
-Returns the bound address of the server as seen by the operating system.
-Useful to find which port was assigned when giving getting an OS-assigned address
+Returns the bound address and port of the server as reported by the operating system.
+Useful to find which port was assigned when giving getting an OS-assigned address.
+Returns an object with two properties, e.g. `{"address":"127.0.0.1", "port":2121}`
 
 Example:
 
@@ -226,7 +234,7 @@ received.
 #### socket.setSecure()
 
 This function has been removed in v0.3. It used to upgrade the connection to
-SSL/TLS. See the TLS for the new API.
+SSL/TLS. See the [TLS section](tls.html#tLS_) for the new API.
 
 
 #### socket.write(data, [encoding], [callback])
@@ -298,6 +306,11 @@ data packet received and the first keepalive probe. Setting 0 for
 initialDelay will leave the value unchanged from the default
 (or previous) setting.
 
+#### socket.address()
+
+Returns the bound address and port of the socket as reported by the operating system.
+Returns an object with two properties, e.g. `{"address":"192.168.57.1", "port":62053}`
+
 #### socket.remoteAddress
 
 The string representation of the remote IP address. For example,
@@ -319,7 +332,7 @@ See `connect()`.
 
 Emitted when data is received.  The argument `data` will be a `Buffer` or
 `String`.  Encoding of data is set by `socket.setEncoding()`.
-(See the section on `Readable Socket` for more information.)
+(See the [Readable Stream](streams.html#readable_Stream) section for more information.)
 
 #### Event: 'end'
 

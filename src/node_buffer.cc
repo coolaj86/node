@@ -495,7 +495,7 @@ Handle<Value> Buffer::Ucs2Write(const Arguments &args) {
 
   size_t max_length = args[2]->IsUndefined() ? buffer->length_ - offset
                                              : args[2]->Uint32Value();
-  max_length = MIN(buffer->length_ - offset, max_length);
+  max_length = MIN(buffer->length_ - offset, max_length) / 2;
 
   uint16_t* p = (uint16_t*)(buffer->data_ + offset);
 
@@ -503,6 +503,10 @@ Handle<Value> Buffer::Ucs2Write(const Arguments &args) {
                          0,
                          max_length,
                          String::HINT_MANY_WRITES_EXPECTED);
+
+  constructor_template->GetFunction()->Set(chars_written_sym,
+                                           Integer::New(written));
+
   return scope.Close(Integer::New(written * 2));
 }
 
@@ -674,6 +678,11 @@ Handle<Value> Buffer::ByteLength(const Arguments &args) {
 
 Handle<Value> Buffer::MakeFastBuffer(const Arguments &args) {
   HandleScope scope;
+
+  if (!Buffer::HasInstance(args[0])) {
+    return ThrowException(Exception::TypeError(String::New(
+            "First argument must be a Buffer")));
+  }
 
   Buffer *buffer = ObjectWrap::Unwrap<Buffer>(args[0]->ToObject());
   Local<Object> fast_buffer = args[1]->ToObject();;

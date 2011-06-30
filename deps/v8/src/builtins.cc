@@ -373,8 +373,7 @@ static bool ArrayPrototypeHasNoElements(Context* global_context,
   array_proto = JSObject::cast(proto);
   if (array_proto != global_context->initial_object_prototype()) return false;
   if (array_proto->elements() != Heap::empty_fixed_array()) return false;
-  ASSERT(array_proto->GetPrototype()->IsNull());
-  return true;
+  return array_proto->GetPrototype()->IsNull();
 }
 
 
@@ -818,8 +817,8 @@ BUILTIN(ArraySplice) {
       const int delta = actual_delete_count - item_count;
 
       if (actual_start > 0) {
-        Object** start = elms->data_start();
-        memmove(start + delta, start, actual_start * kPointerSize);
+        AssertNoAllocation no_gc;
+        MoveElements(&no_gc, elms, delta, elms, 0, actual_start);
       }
 
       elms = LeftTrimFixedArray(elms, delta);
