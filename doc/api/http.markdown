@@ -31,6 +31,8 @@ This is an `EventEmitter` with the following events:
 
 `function (request, response) { }`
 
+Emitted each time there is request. Note that there may be multiple requests
+per connection (in the case of keep-alive connections).
  `request` is an instance of `http.ServerRequest` and `response` is
  an instance of `http.ServerResponse`
 
@@ -47,13 +49,6 @@ This is an `EventEmitter` with the following events:
 `function (errno) { }`
 
  Emitted when the server closes.
-
-### Event: 'request'
-
-`function (request, response) {}`
-
-Emitted each time there is request. Note that there may be multiple requests
-per connection (in the case of keep-alive connections).
 
 ### Event: 'checkContinue'
 
@@ -93,7 +88,7 @@ sent to the server on that socket.
 
 If a client connection emits an 'error' event - it will forwarded here.
 
-### http.createServer(requestListener)
+### http.createServer([requestListener])
 
 Returns a new web server object.
 
@@ -141,15 +136,35 @@ Emitted when a piece of the message body is received.
 Example: A chunk of the body is given as the single
 argument. The transfer-encoding has been decoded.  The
 body chunk is a string.  The body encoding is set with
-`request.setBodyEncoding()`.
+`request.setEncoding()`.
 
 ### Event: 'end'
 
 `function () { }`
 
-Emitted exactly once for each message. No arguments.  After
-emitted no other events will be emitted on the request.
+Emitted exactly once for each request. After that, no more `'data'` events
+will be emitted on the request.
 
+### Event: 'close'
+
+`function (err) { }`
+
+Indicates that the underlaying connection was terminated before
+`response.end()` was called or able to flush.
+
+The `err` parameter is always present and indicates the reason for the timeout:
+
+`err.code === 'timeout'` indicates that the underlaying connection timed out.
+This may happen because all incoming connections have a default timeout of 2
+minutes.
+
+`err.code === 'aborted'` means that the client has closed the underlaying
+connection prematurely.
+
+Just like `'end'`, this event occurs only once per request, and no more `'data'`
+events will fire afterwards.
+
+Note: `'close'` can fire after `'end'`, but not vice versa.
 
 ### request.method
 
@@ -241,7 +256,7 @@ passed as the second parameter to the `'request'` event. It is a `Writable Strea
 ### response.writeContinue()
 
 Sends a HTTP/1.1 100 Continue message to the client, indicating that
-the request body should be sent. See the the `checkContinue` event on
+the request body should be sent. See the [checkContinue](#event_checkContinue_) event on
 `Server`.
 
 ### response.writeHead(statusCode, [reasonPhrase], [headers])
@@ -263,6 +278,11 @@ be called before `response.end()` is called.
 
 If you call `response.write()` or `response.end()` before calling this, the
 implicit/mutable headers will be calculated and call this function for you.
+
+Note: that Content-Length is given in bytes not characters. The above example
+works because the string `'hello world'` contains only single byte characters.
+If the body contains higher coded characters then `Buffer.byteLength()`
+should be used to determine the number of bytes in a given encoding.
 
 ### response.statusCode
 
@@ -396,6 +416,10 @@ Example:
       });
     });
 
+    req.on('error', function(e) {
+      console.log('problem with request: ' + e.message);
+    });
+
     // write data to request body
     req.write('data\n');
     req.write('data\n');
@@ -452,13 +476,59 @@ agent. The `http.getAgent()` function allows you to access the agents.
 
 ### Event: 'upgrade'
 
-`function (request, socket, head)`
+`function (response, socket, head)`
 
-Emitted each time a server responds to a request with an upgrade. If this event
-isn't being listened for, clients receiving an upgrade header will have their
-connections closed.
+Emitted each time a server responds to a request with an upgrade. If this
+event isn't being listened for, clients receiving an upgrade header will have
+their connections closed.
 
-See the description of the `upgrade` event for `http.Server` for further details.
+A client server pair that show you how to listen for the `upgrade` event using `http.getAgent`:
+
+    var http = require('http');
+    var net = require('net');
+
+    // Create an HTTP server
+    var srv = http.createServer(function (req, res) {
+      res.writeHead(200, {'Content-Type': 'text/plain'});
+      res.end('okay');
+    });
+    srv.on('upgrade', function(req, socket, upgradeHead) {
+      socket.write('HTTP/1.1 101 Web Socket Protocol Handshake\r\n' +
+                   'Upgrade: WebSocket\r\n' +
+                   'Connection: Upgrade\r\n' +
+                   '\r\n\r\n');
+
+      socket.ondata = function(data, start, end) {
+        socket.write(data.toString('utf8', start, end), 'utf8'); // echo back
+      };
+    });
+
+    // now that server is running
+    srv.listen(1337, '127.0.0.1', function() {
+
+      // make a request
+      var agent = http.getAgent('127.0.0.1', 1337);
+
+      var options = {
+        agent: agent,
+        port: 1337,
+        host: '127.0.0.1',
+        headers: {
+          'Connection': 'Upgrade',
+          'Upgrade': 'websocket'
+        }
+      };
+
+      var req = http.request(options);
+      req.end();
+
+      agent.on('upgrade', function(res, socket, upgradeHead) {
+        console.log('got upgraded!');
+        socket.end();
+        process.exit(0);
+      });
+    });
+
 
 ### Event: 'continue'
 
@@ -485,7 +555,7 @@ A queue of requests waiting to be sent to sockets.
 ## http.ClientRequest
 
 This object is created internally and returned from `http.request()`.  It
-represents an _in-progress_ request whose header has already been queued.  The 
+represents an _in-progress_ request whose header has already been queued.  The
 header is still mutable using the `setHeader(name, value)`, `getHeader(name)`,
 `removeHeader(name)` API.  The actual header will be sent along with the first
 data chunk or when closing the connection.

@@ -29,6 +29,24 @@ which can be used to generate hash digests.
 of OpenSSL on the platform. Examples are `'sha1'`, `'md5'`, `'sha256'`, `'sha512'`, etc.
 On recent releases, `openssl list-message-digest-algorithms` will display the available digest algorithms.
 
+Example: this program that takes the sha1 sum of a file
+
+    var filename = process.argv[2];
+    var crypto = require('crypto');
+    var fs = require('fs');
+
+    var shasum = crypto.createHash('sha1');
+
+    var s = fs.ReadStream(filename);
+    s.on('data', function(d) {
+      shasum.update(d);
+    });
+
+    s.on('end', function() {
+      var d = shasum.digest('hex');
+      console.log(d + '  ' + filename);
+    });
+
 ### hash.update(data)
 
 Updates the hash content with the given `data`.
@@ -75,7 +93,7 @@ Returns the enciphered contents, and can be called many times with new data as i
 
 ### cipher.final(output_encoding='binary')
 
-Returns any remaining enciphered contents, with `output_encoding` being one of: `'binary'`, `'ascii'` or `'utf8'`.
+Returns any remaining enciphered contents, with `output_encoding` being one of: `'binary'`, `'base64'` or `'hex'`.
 
 ### crypto.createDecipher(algorithm, key)
 
@@ -90,7 +108,7 @@ The `output_decoding` specifies in what format to return the deciphered plaintex
 ### decipher.final(output_encoding='binary')
 
 Returns any remaining plaintext which is deciphered,
-with `output_encoding' being one of: `'binary'`, `'ascii'` or `'utf8'`.
+with `output_encoding` being one of: `'binary'`, `'ascii'` or `'utf8'`.
 
 
 ### crypto.createSign(algorithm)
@@ -121,10 +139,12 @@ This is the mirror of the signing object above.
 Updates the verifier object with data.
 This can be called many times with new data as it is streamed.
 
-### verifier.verify(cert, signature, signature_format='binary')
+### verifier.verify(object, signature, signature_format='binary')
 
-Verifies the signed data by using the `cert` which is a string containing
-the PEM encoded public key, and `signature`, which is the previously calculates
-signature for the data, in the `signature_format` which can be `'binary'`, `'hex'` or `'base64'`.
+Verifies the signed data by using the `object` and `signature`. `object` is  a
+string containing a PEM encoded object, which can be one of RSA public key,
+DSA public key, or X.509 certificate. `signature` is the previously calculated
+signature for the data, in the `signature_format` which can be `'binary'`,
+`'hex'` or `'base64'`.
 
 Returns true or false depending on the validity of the signature for the data and public key.
