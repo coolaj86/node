@@ -17,13 +17,14 @@ Currently Browserified:
 Usage
 ====
 
-With `ender.js`:
+
+Node.JS:
+
+  umm.. it's built in...
+
+Ender.JS (Browser):
 
     ender -b util assert path url # querystring events
-
-Without `ender.js`:
-
-see the [`require-kiss`](https://github.com/coolaj86/nodejs-libs-4-browser/tree/require-kiss) branch
 
 Note: `events` and `querystring` are owned by a different user on `npm`, but I've requested the necessary changes.
 
