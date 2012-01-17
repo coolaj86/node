@@ -17,6 +17,8 @@
     "node": ">= 0.2.0",
     "ender": ">= 0.5.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "events.node": ">= 0.4.0"
+  },
   "devDependencies": {}
 }
