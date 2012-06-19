@@ -2,12 +2,16 @@
   "author": "Joyent (http://www.joyent.com)",
   "name": "url",
   "description": "Node.JS url module",
-  "keywords": ["ender", "url"],
-  "version": "0.6.20",
-  "homepage": "http://nodejs.org/docs/v0.4.9/api/url.html",
+  "keywords": [
+    "ender",
+    "pakmanager",
+    "url"
+  ],
+  "version": "0.7.9",
+  "homepage": "http://nodejs.org/api/url.html",
   "repository": {
     "type": "git",
-    "url": "git://github.com/coolaj86/nodejs-libs-4-browser.git"
+    "url": "git://github.com/coolaj86/node.git"
   },
   "main": "./url.js",
   "directories": {
@@ -18,8 +22,8 @@
     "ender": ">= 0.5.0"
   },
   "dependencies": {
-    "querystring": ">= 0.0.0",
-    "punycode": ">= 0.0.0"
+    "querystring": ">=0.1.0 <0.2.0",
+    "punycode": ">=1.0.0 <1.1.0"
   },
   "devDependencies": {}
 }
