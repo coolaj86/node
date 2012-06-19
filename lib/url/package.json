@@ -3,7 +3,7 @@
   "name": "url",
   "description": "Node.JS url module",
   "keywords": ["ender", "url"],
-  "version": "0.4.9",
+  "version": "0.6.20",
   "homepage": "http://nodejs.org/docs/v0.4.9/api/url.html",
   "repository": {
     "type": "git",
@@ -18,7 +18,8 @@
     "ender": ">= 0.5.0"
   },
   "dependencies": {
-    "querystring": ">= 0.0.0"
+    "querystring": ">= 0.0.0",
+    "punycode": ">= 0.0.0"
   },
   "devDependencies": {}
 }
